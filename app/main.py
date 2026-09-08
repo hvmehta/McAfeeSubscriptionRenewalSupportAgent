@@ -1,9 +1,11 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 
 from app.checks import diagnose_renewal
 from app.explain import ClaudeExplainer, explain
 
 app = FastAPI(title="Subscription Renewal Support Agent")
+app.mount("/ui", StaticFiles(directory="app/static", html=True), name="ui")
 
 
 @app.get("/health")
