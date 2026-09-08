@@ -45,15 +45,34 @@ def read_renewal_event(conn, account_id: str) -> dict | None:
     return dict(row) if row else None
 
 
-def classify(payment: dict | None, subscription: dict | None, renewal_event: dict | None) -> str:
+def read_entitlement(conn, account_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT product, active FROM entitlements WHERE account_id = ?",
+        (account_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def classify(
+    payment: dict | None,
+    subscription: dict | None,
+    renewal_event: dict | None,
+    entitlement: dict | None,
+) -> str:
     if subscription is None:
         return "NO_SUBSCRIPTION"
     if payment is None:
         return "NO_PAYMENT_RECORD"
+    if subscription["status"] == "canceled" and renewal_event is not None and renewal_event["result"] == "success":
+        return "RENEWED_AFTER_CANCELLATION"
     if payment["status"] == "declined":
         return "PAYMENT_DECLINED"
-    if renewal_event is not None and renewal_event["result"] == "failure":
+    if renewal_event is None:
+        return "RENEWAL_EVENT_MISSING"
+    if renewal_event["result"] == "failure":
         return "RENEWAL_EVENT_FAILED"
+    if entitlement is None or not entitlement["active"]:
+        return "ENTITLEMENT_NOT_ACTIVATED"
     return "OK"
 
 
@@ -63,15 +82,17 @@ def diagnose_renewal(account_id: str) -> Diagnosis:
         payment = verify_payment(conn, account_id)
         subscription = read_subscription_state(conn, account_id)
         renewal_event = read_renewal_event(conn, account_id)
+        entitlement = read_entitlement(conn, account_id)
     finally:
         conn.close()
 
-    diagnosis_code = classify(payment, subscription, renewal_event)
+    diagnosis_code = classify(payment, subscription, renewal_event, entitlement)
     return Diagnosis(
         diagnosis_code=diagnosis_code,
         evidence={
             "payment": payment,
             "subscription": subscription,
             "renewal_event": renewal_event,
+            "entitlement": entitlement,
         },
     )

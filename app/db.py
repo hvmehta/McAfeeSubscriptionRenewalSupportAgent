@@ -43,23 +43,37 @@ CREATE TABLE entitlements (
 SEED = """
 INSERT INTO accounts (account_id, email, status) VALUES
     ('acct-healthy', 'healthy@example.com', 'active'),
-    ('acct-payment-declined', 'declined@example.com', 'active');
+    ('acct-payment-declined', 'declined@example.com', 'active'),
+    ('acct-canceled-renewed', 'canceled@example.com', 'active'),
+    ('acct-missing-renewal-event', 'missingevent@example.com', 'active'),
+    ('acct-lapsed-entitlement', 'lapsed@example.com', 'active');
 
 INSERT INTO subscriptions (account_id, plan, status, renewal_date) VALUES
     ('acct-healthy', 'total_protection', 'active', '2026-09-01'),
-    ('acct-payment-declined', 'total_protection', 'active', '2026-09-01');
+    ('acct-payment-declined', 'total_protection', 'active', '2026-09-01'),
+    ('acct-canceled-renewed', 'total_protection', 'canceled', '2026-09-01'),
+    ('acct-missing-renewal-event', 'total_protection', 'active', '2026-09-01'),
+    ('acct-lapsed-entitlement', 'total_protection', 'active', '2026-09-01');
 
 INSERT INTO payments (payment_id, account_id, status, occurred_at) VALUES
     ('pay-1', 'acct-healthy', 'succeeded', '2026-09-01T00:00:00'),
-    ('pay-2', 'acct-payment-declined', 'declined', '2026-09-01T00:00:00');
+    ('pay-2', 'acct-payment-declined', 'declined', '2026-09-01T00:00:00'),
+    ('pay-3', 'acct-canceled-renewed', 'succeeded', '2026-09-01T00:00:00'),
+    ('pay-4', 'acct-missing-renewal-event', 'succeeded', '2026-09-01T00:00:00'),
+    ('pay-5', 'acct-lapsed-entitlement', 'succeeded', '2026-09-01T00:00:00');
 
 INSERT INTO renewal_events (event_id, account_id, result, occurred_at) VALUES
     ('evt-1', 'acct-healthy', 'success', '2026-09-01T00:05:00'),
-    ('evt-2', 'acct-payment-declined', 'failure', '2026-09-01T00:05:00');
+    ('evt-2', 'acct-payment-declined', 'failure', '2026-09-01T00:05:00'),
+    ('evt-3', 'acct-canceled-renewed', 'success', '2026-09-01T00:05:00'),
+    ('evt-4', 'acct-lapsed-entitlement', 'success', '2026-09-01T00:05:00');
 
 INSERT INTO entitlements (account_id, product, active) VALUES
     ('acct-healthy', 'total_protection', 1),
-    ('acct-payment-declined', 'total_protection', 1);
+    ('acct-payment-declined', 'total_protection', 1),
+    ('acct-canceled-renewed', 'total_protection', 1),
+    ('acct-missing-renewal-event', 'total_protection', 1),
+    ('acct-lapsed-entitlement', 'total_protection', 0);
 """
 
 
