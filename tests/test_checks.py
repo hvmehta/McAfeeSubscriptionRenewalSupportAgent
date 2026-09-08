@@ -8,7 +8,7 @@ def test_payment_declined_is_detected():
 
 def test_healthy_renewal_has_no_diagnosis():
     result = diagnose_renewal(account_id="acct-healthy")
-    assert result.diagnosis_code == "WRONG"
+    assert result.diagnosis_code == "OK"
 
 
 def test_renewal_after_cancellation_is_detected():
