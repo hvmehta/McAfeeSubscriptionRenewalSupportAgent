@@ -22,6 +22,7 @@
     margin: 20px 0;
     flex-wrap: wrap;
   }
+  label { color: #9aa0a6; font-size: 0.9rem; }
   select, button {
     font-size: 0.95rem;
     padding: 8px 12px;
@@ -60,6 +61,15 @@
     white-space: pre-wrap;
     word-break: break-word;
   }
+  #hints {
+    background: #1a1d24;
+    border: 1px solid #2a2d34;
+    border-radius: 8px;
+    padding: 14px 14px 14px 32px;
+    margin: 0;
+    line-height: 1.5;
+  }
+  #hints li + li { margin-top: 8px; }
   .explanation {
     background: #1a1d24;
     border: 1px solid #2a2d34;
@@ -75,13 +85,8 @@
   <p class="subtitle">Deterministic diagnosis over seeded evidence, with an optional LLM explanation layer.</p>
 
   <div class="controls">
-    <select id="accountSelect">
-      <option value="acct-healthy">acct-healthy</option>
-      <option value="acct-payment-declined">acct-payment-declined</option>
-      <option value="acct-canceled-renewed">acct-canceled-renewed</option>
-      <option value="acct-missing-renewal-event">acct-missing-renewal-event</option>
-      <option value="acct-lapsed-entitlement">acct-lapsed-entitlement</option>
-    </select>
+    <label for="customerSelect">Select demo customer</label>
+    <select id="customerSelect"></select>
     <button id="diagnoseBtn">Diagnose</button>
     <button id="explainBtn">Diagnose + Explain</button>
   </div>
@@ -93,18 +98,25 @@
     <pre id="evidence"></pre>
   </section>
 
+  <section id="hintsSection" hidden>
+    <h2>Investigation Hints (for engineers)</h2>
+    <ul id="hints"></ul>
+  </section>
+
   <section id="explanationSection" hidden>
-    <h2>Explanation</h2>
+    <h2>Explanation (for the customer)</h2>
     <div class="explanation" id="explanation"></div>
   </section>
 
 <script>
-  const accountSelect = document.getElementById('accountSelect');
+  const customerSelect = document.getElementById('customerSelect');
   const diagnoseBtn = document.getElementById('diagnoseBtn');
   const explainBtn = document.getElementById('explainBtn');
   const badge = document.getElementById('badge');
   const evidenceSection = document.getElementById('evidenceSection');
   const evidenceEl = document.getElementById('evidence');
+  const hintsSection = document.getElementById('hintsSection');
+  const hintsEl = document.getElementById('hints');
   const explanationSection = document.getElementById('explanationSection');
   const explanationEl = document.getElementById('explanation');
 
@@ -118,15 +130,16 @@
   }
 
   async function runDiagnose(withExplain) {
-    const accountId = accountSelect.value;
+    const customerId = customerSelect.value;
     setButtonsDisabled(true);
     setBadge('Running…', 'pending');
     evidenceSection.hidden = true;
+    hintsSection.hidden = true;
     explanationSection.hidden = true;
 
     const path = withExplain
-      ? `/diagnose/${accountId}/explain`
-      : `/diagnose/${accountId}`;
+      ? `/diagnose/${customerId}/explain`
+      : `/diagnose/${customerId}`;
 
     try {
       const response = await fetch(path);
@@ -143,6 +156,11 @@
       evidenceSection.hidden = false;
       evidenceEl.textContent = JSON.stringify(body.evidence, null, 2);
 
+      if (body.investigation_hints && body.investigation_hints.length > 0) {
+        hintsSection.hidden = false;
+        hintsEl.innerHTML = body.investigation_hints.map(h => `<li>${h}</li>`).join('');
+      }
+
       if (withExplain) {
         explanationSection.hidden = false;
         explanationEl.textContent = body.explanation;
@@ -156,8 +174,24 @@
     }
   }
 
+  async function loadCustomers() {
+    setButtonsDisabled(true);
+    try {
+      const response = await fetch('/customers');
+      const customers = await response.json();
+      customerSelect.innerHTML = customers
+        .map(c => `<option value="${c.customer_id}">${c.name} — ${c.customer_id}</option>`)
+        .join('');
+    } catch (err) {
+      customerSelect.innerHTML = '<option value="">(failed to load customers)</option>';
+    } finally {
+      setButtonsDisabled(false);
+    }
+  }
+
   diagnoseBtn.addEventListener('click', () => runDiagnose(false));
   explainBtn.addEventListener('click', () => runDiagnose(true));
+  loadCustomers();
 </script>
 </body>
 </html>

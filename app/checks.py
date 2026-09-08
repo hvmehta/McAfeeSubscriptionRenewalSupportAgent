@@ -9,46 +9,54 @@ class Diagnosis:
     evidence: dict = field(default_factory=dict)
 
 
-def verify_payment(conn, account_id: str) -> dict | None:
+def read_customer(conn, customer_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT customer_id, name, email, status FROM customers WHERE customer_id = ?",
+        (customer_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def verify_payment(conn, customer_id: str) -> dict | None:
     row = conn.execute(
         """
         SELECT payment_id, status, occurred_at
         FROM payments
-        WHERE account_id = ?
+        WHERE customer_id = ?
         ORDER BY occurred_at DESC
         LIMIT 1
         """,
-        (account_id,),
+        (customer_id,),
     ).fetchone()
     return dict(row) if row else None
 
 
-def read_subscription_state(conn, account_id: str) -> dict | None:
+def read_subscription_state(conn, customer_id: str) -> dict | None:
     row = conn.execute(
-        "SELECT plan, status, renewal_date FROM subscriptions WHERE account_id = ?",
-        (account_id,),
+        "SELECT plan, status, renewal_date FROM subscriptions WHERE customer_id = ?",
+        (customer_id,),
     ).fetchone()
     return dict(row) if row else None
 
 
-def read_renewal_event(conn, account_id: str) -> dict | None:
+def read_renewal_event(conn, customer_id: str) -> dict | None:
     row = conn.execute(
         """
         SELECT event_id, result, occurred_at
         FROM renewal_events
-        WHERE account_id = ?
+        WHERE customer_id = ?
         ORDER BY occurred_at DESC
         LIMIT 1
         """,
-        (account_id,),
+        (customer_id,),
     ).fetchone()
     return dict(row) if row else None
 
 
-def read_entitlement(conn, account_id: str) -> dict | None:
+def read_entitlement(conn, customer_id: str) -> dict | None:
     row = conn.execute(
-        "SELECT product, active FROM entitlements WHERE account_id = ?",
-        (account_id,),
+        "SELECT product, active FROM entitlements WHERE customer_id = ?",
+        (customer_id,),
     ).fetchone()
     return dict(row) if row else None
 
@@ -76,13 +84,14 @@ def classify(
     return "OK"
 
 
-def diagnose_renewal(account_id: str) -> Diagnosis:
+def diagnose_renewal(customer_id: str) -> Diagnosis:
     conn = get_connection()
     try:
-        payment = verify_payment(conn, account_id)
-        subscription = read_subscription_state(conn, account_id)
-        renewal_event = read_renewal_event(conn, account_id)
-        entitlement = read_entitlement(conn, account_id)
+        customer = read_customer(conn, customer_id)
+        payment = verify_payment(conn, customer_id)
+        subscription = read_subscription_state(conn, customer_id)
+        renewal_event = read_renewal_event(conn, customer_id)
+        entitlement = read_entitlement(conn, customer_id)
     finally:
         conn.close()
 
@@ -90,6 +99,7 @@ def diagnose_renewal(account_id: str) -> Diagnosis:
     return Diagnosis(
         diagnosis_code=diagnosis_code,
         evidence={
+            "customer": customer,
             "payment": payment,
             "subscription": subscription,
             "renewal_event": renewal_event,

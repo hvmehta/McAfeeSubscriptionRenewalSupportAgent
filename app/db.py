@@ -1,79 +1,94 @@
 import sqlite3
 
 SCHEMA = """
-CREATE TABLE accounts (
-    account_id TEXT PRIMARY KEY,
+CREATE TABLE customers (
+    customer_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
     email TEXT NOT NULL,
     status TEXT NOT NULL
 );
 
 CREATE TABLE subscriptions (
-    account_id TEXT PRIMARY KEY,
+    customer_id TEXT PRIMARY KEY,
     plan TEXT NOT NULL,
     status TEXT NOT NULL,
     renewal_date TEXT NOT NULL,
-    FOREIGN KEY (account_id) REFERENCES accounts (account_id)
+    FOREIGN KEY (customer_id) REFERENCES customers (customer_id)
 );
 
 CREATE TABLE payments (
     payment_id TEXT PRIMARY KEY,
-    account_id TEXT NOT NULL,
+    customer_id TEXT NOT NULL,
     status TEXT NOT NULL,
     occurred_at TEXT NOT NULL,
-    FOREIGN KEY (account_id) REFERENCES accounts (account_id)
+    FOREIGN KEY (customer_id) REFERENCES customers (customer_id)
 );
 
 CREATE TABLE renewal_events (
     event_id TEXT PRIMARY KEY,
-    account_id TEXT NOT NULL,
+    customer_id TEXT NOT NULL,
     result TEXT NOT NULL,
     occurred_at TEXT NOT NULL,
-    FOREIGN KEY (account_id) REFERENCES accounts (account_id)
+    FOREIGN KEY (customer_id) REFERENCES customers (customer_id)
 );
 
 CREATE TABLE entitlements (
-    account_id TEXT NOT NULL,
+    customer_id TEXT NOT NULL,
     product TEXT NOT NULL,
     active INTEGER NOT NULL,
-    PRIMARY KEY (account_id, product),
-    FOREIGN KEY (account_id) REFERENCES accounts (account_id)
+    PRIMARY KEY (customer_id, product),
+    FOREIGN KEY (customer_id) REFERENCES customers (customer_id)
 );
 """
 
+# Fictional demo customers. IDs are arbitrary customer numbers and carry
+# no meaning of their own - the failure each one demonstrates lives in
+# the subscriptions/payments/renewal_events/entitlements rows below, not
+# in the ID string. This mirrors a real support tool, where a customer
+# number never hints at what's wrong with the customer.
 SEED = """
-INSERT INTO accounts (account_id, email, status) VALUES
-    ('acct-healthy', 'healthy@example.com', 'active'),
-    ('acct-payment-declined', 'declined@example.com', 'active'),
-    ('acct-canceled-renewed', 'canceled@example.com', 'active'),
-    ('acct-missing-renewal-event', 'missingevent@example.com', 'active'),
-    ('acct-lapsed-entitlement', 'lapsed@example.com', 'active');
+INSERT INTO customers (customer_id, name, email, status) VALUES
+    ('ACC-10234', 'Sam Taylor', 'sam.taylor@example.com', 'active'),
+    ('ACC-10391', 'Jordan Lee', 'jordan.lee@example.com', 'active'),
+    ('ACC-10528', 'Riley Chen', 'riley.chen@example.com', 'active'),
+    ('ACC-10662', 'Morgan Patel', 'morgan.patel@example.com', 'active'),
+    ('ACC-10809', 'Casey Nguyen', 'casey.nguyen@example.com', 'active'),
+    ('ACC-10945', 'Avery Brooks', 'avery.brooks@example.com', 'active');
 
-INSERT INTO subscriptions (account_id, plan, status, renewal_date) VALUES
-    ('acct-healthy', 'total_protection', 'active', '2026-09-01'),
-    ('acct-payment-declined', 'total_protection', 'active', '2026-09-01'),
-    ('acct-canceled-renewed', 'total_protection', 'canceled', '2026-09-01'),
-    ('acct-missing-renewal-event', 'total_protection', 'active', '2026-09-01'),
-    ('acct-lapsed-entitlement', 'total_protection', 'active', '2026-09-01');
+INSERT INTO subscriptions (customer_id, plan, status, renewal_date) VALUES
+    ('ACC-10234', 'total_protection', 'active', '2026-09-01'),
+    ('ACC-10391', 'total_protection', 'active', '2026-09-01'),
+    ('ACC-10528', 'total_protection', 'canceled', '2026-09-01'),
+    ('ACC-10662', 'total_protection', 'active', '2026-09-01'),
+    ('ACC-10809', 'total_protection', 'active', '2026-09-01'),
+    ('ACC-10945', 'total_protection', 'active', '2026-09-01');
 
-INSERT INTO payments (payment_id, account_id, status, occurred_at) VALUES
-    ('pay-1', 'acct-healthy', 'succeeded', '2026-09-01T00:00:00'),
-    ('pay-2', 'acct-payment-declined', 'declined', '2026-09-01T00:00:00'),
-    ('pay-3', 'acct-canceled-renewed', 'succeeded', '2026-09-01T00:00:00'),
-    ('pay-4', 'acct-missing-renewal-event', 'succeeded', '2026-09-01T00:00:00'),
-    ('pay-5', 'acct-lapsed-entitlement', 'succeeded', '2026-09-01T00:00:00');
+INSERT INTO payments (payment_id, customer_id, status, occurred_at) VALUES
+    ('PAY-88201', 'ACC-10234', 'succeeded', '2026-09-01T00:00:00'),
+    ('PAY-88202', 'ACC-10391', 'declined', '2026-09-01T00:00:00'),
+    ('PAY-88203', 'ACC-10528', 'succeeded', '2026-09-01T00:00:00'),
+    ('PAY-88204', 'ACC-10662', 'succeeded', '2026-09-01T00:00:00'),
+    ('PAY-88205', 'ACC-10809', 'succeeded', '2026-09-01T00:00:00'),
+    ('PAY-88206', 'ACC-10945', 'succeeded', '2026-09-01T00:00:00');
 
-INSERT INTO renewal_events (event_id, account_id, result, occurred_at) VALUES
-    ('evt-1', 'acct-healthy', 'success', '2026-09-01T00:05:00'),
-    ('evt-2', 'acct-payment-declined', 'failure', '2026-09-01T00:05:00'),
-    ('evt-3', 'acct-canceled-renewed', 'success', '2026-09-01T00:05:00'),
-    ('evt-4', 'acct-lapsed-entitlement', 'success', '2026-09-01T00:05:00');
+INSERT INTO renewal_events (event_id, customer_id, result, occurred_at) VALUES
+    ('EVT-55101', 'ACC-10234', 'success', '2026-09-01T00:05:00'),
+    ('EVT-55102', 'ACC-10391', 'failure', '2026-09-01T00:05:00'),
+    ('EVT-55103', 'ACC-10528', 'success', '2026-09-01T00:05:00'),
+    ('EVT-55105', 'ACC-10809', 'success', '2026-09-01T00:05:00'),
+    ('EVT-55106', 'ACC-10945', 'success', '2026-09-01T00:05:00');
 
-INSERT INTO entitlements (account_id, product, active) VALUES
-    ('acct-healthy', 'total_protection', 1),
-    ('acct-payment-declined', 'total_protection', 1),
-    ('acct-canceled-renewed', 'total_protection', 1),
-    ('acct-missing-renewal-event', 'total_protection', 1),
-    ('acct-lapsed-entitlement', 'total_protection', 0);
+-- Note: ACC-10945 has no entitlement row at all - provisioning was
+-- never triggered, as opposed to ACC-10809 below, whose entitlement
+-- row exists but is inactive - provisioning was attempted and failed.
+-- Both reach the same ENTITLEMENT_NOT_ACTIVATED diagnosis; the
+-- investigation-hints layer (app/hints.py) is what tells them apart.
+INSERT INTO entitlements (customer_id, product, active) VALUES
+    ('ACC-10234', 'total_protection', 1),
+    ('ACC-10391', 'total_protection', 1),
+    ('ACC-10528', 'total_protection', 1),
+    ('ACC-10662', 'total_protection', 1),
+    ('ACC-10809', 'total_protection', 0);
 """
 
 
@@ -83,3 +98,14 @@ def get_connection() -> sqlite3.Connection:
     conn.executescript(SCHEMA)
     conn.executescript(SEED)
     return conn
+
+
+def list_customers() -> list[dict]:
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT customer_id, name FROM customers ORDER BY name"
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()

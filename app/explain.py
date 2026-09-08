@@ -37,7 +37,7 @@ class ClaudeExplainer:
     """Explainer backed by the Claude API.
 
     Takes only a Diagnosis (diagnosis code + evidence dict) — it has no
-    database handle and cannot query or write account data. The prompt
+    database handle and cannot query or write customer data. The prompt
     it sends the model is entirely built from build_prompt().
     """
 
