@@ -1,4 +1,4 @@
-# McAfee Subscription Renewal Support Agent
+# Subscription Renewal Support Agent
 
 A prototype support-diagnosis tool for subscription renewal failures.
 Given a customer ID, it produces a diagnosis, the evidence behind it,
